@@ -43,6 +43,42 @@ multilayer bed modelling.
 * PSA cycle simulation for Skarstrom-type processes (Under Development)
 * Multilayer fixed-bed adsorption with multiple isotherms
 
+## Non-Isothermal Operations and Parameters
+
+The simulation can be run in both isothermal and non-isothermal modes. This is controlled by a specific flag in the input file:
+* `Isothermal yes` — Enables isothermal mode (temperature remains constant).
+* `Isothermal no` — Enables non-isothermal mode (accounts for heat effects).
+*(All other related thermal parameters are clearly labeled inside the input file).*
+
+### Temperature-Dependent Isotherms
+
+To support non-isothermal modeling, the code now includes temperature-dependent isotherm models.
+
+**1. Langmuir-Freundlich (Temperature-Dependent)**
+You can model the adsorption process using a temperature-dependent Langmuir-Freundlich isotherm where the parameters q, b, and n depend on temperature.
+* **Equation:**
+  `LF(T) = q(T) * b(T) * p ^ n(T) / (1 + b(T) * p ^ n(T))`
+* **Temperature Dependencies:**
+  `q(T) = q1 + q2 * T`
+  `b(T) = b1 * exp(b2/T)`
+  `n(T) = n1 + n2/T`
+* **Input Example:** `Langmuir-Freundlich      6.9480 6.27e-10 1.3146 -0.0070 4572.19 -162.05`
+  *(Coefficients correspond to: q1, b1, n1, q2, b2, n2)*
+
+**2. Langmuir-Freundlich-T**
+An alternative variation with different exponential temperature dependencies.
+* **Equation:**
+  `LF(T) = q * b * exp(k1/T) * p ^ n / (1 + b * exp(k2/T) * p ^ n)`
+* **Input Example:** `Langmuir-Freundlich-T    6.9480 6.27e-10 1.3146 1500 1250`
+  *(Coefficients correspond to: q, b, n, k1, k2)*
+
+### Mass Transfer Coefficients (MTC)
+
+The mass transfer coefficient can be configured flexibly for each component in the mixture:
+* **Constant MTC:** A fixed value throughout the simulation.
+* **Arrhenius Equation:** MTC varies dynamically with temperature.
+* **Mixed Configuration:** You can assign an Arrhenius-based MTC for certain components while keeping others strictly constant within the same simulation.
+
 ## Examples
 
 Comprehensive examples demonstrating different simulation scenarios, including non-isothermal modes, cyclic configurations, and multilayer beds, are provided in the `examples/` directory of this repository.
@@ -103,7 +139,7 @@ Key capabilities include:
   investigation of design strategies for multilayer beds in 
   breakthrough and cyclic processes.
 
-The extensions for cyclic PSA and multilayer bed modelling were implemented by  
+The extensions for cyclic PSA, non-isothermal operations, and multilayer bed modelling were implemented by  
 **Matvey E. Bobkov** (Boreskov Institute of Catalysis, SB RAS;  
 Novosibirsk State University).
 
