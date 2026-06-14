@@ -1,0 +1,207 @@
+#include "multi_site_isotherm.h"
+
+#include <cmath>
+#include <sstream>
+
+#include "special_functions.h"
+
+void MultiSiteIsotherm::print() const { std::cout << repr(); }
+
+std::string MultiSiteIsotherm::repr() const
+{
+  std::string s;
+  s += "    number of isotherm sites for first layer:  " + std::to_string(numberOfSites) + "\n";   // there was numberOfSites instead numberOfSiteLayers
+  for (size_t i = 0; i < numberOfSites; ++i) // there was numberOfSites instead numberOfSiteLayers
+  {
+    s += sites[i].repr();       // sites uses to store multi isotherms, but now we'll use it like a storage for isotherm-layer object (1st isotherm for 1st layer, 2nd isotherm for 2nd layer), if you want use 
+  }
+  s += "    number of isotherm sites for second layer:  " + std::to_string(numberOfSites1) + "\n";   // there was numberOfSites instead numberOfSiteLayers
+    for (size_t i = numberOfSites; i < numberOfSites + numberOfSites1; ++i) // there was numberOfSites instead numberOfSiteLayers
+  {
+    s += sites[i].repr();       // sites uses to store multi isotherms, but now we'll use it like a storage for isotherm-layer object (1st isotherm for 1st layer, 2nd isotherm for 2nd layer), if you want use 
+  }
+  s += "    number of isotherm sites for the third layer:  " + std::to_string(numberOfSites2) + "\n";   // there was numberOfSites instead numberOfSiteLayers
+    for (size_t i = numberOfSites1; i < numberOfSites1 + numberOfSites2; ++i) // there was numberOfSites instead numberOfSiteLayers
+  {
+    s += sites[i].repr();       // sites uses to store multi isotherms, but now we'll use it like a storage for isotherm-layer object (1st isotherm for 1st layer, 2nd isotherm for 2nd layer), if you want use 
+  }
+  return s;
+}
+
+void MultiSiteIsotherm::add(const Isotherm &isotherm)
+{
+  siteParameterIndex.push_back(numberOfParameters);
+  sites.push_back(isotherm);
+  numberOfParameters += isotherm.numberOfParameters;
+  for (size_t i = 0; i < isotherm.numberOfParameters; ++i)
+  {
+    parameterIndices.emplace_back(sites.size() - 1, i);
+  }
+}
+
+void MultiSiteIsotherm::setParameters(std::vector<double> params)
+{
+  for (size_t i = 0; i < params.size(); ++i)
+  {
+    std::pair<size_t, size_t> index = parameterIndices[i];
+    sites[index.first].parameters[index.second] = params[i];
+  }
+}
+
+std::vector<double> MultiSiteIsotherm::getParameters()
+{
+  std::vector<double> params;
+  for (size_t i = 0; i < numberOfParameters; ++i)
+  {
+    std::pair<size_t, size_t> index = parameterIndices[i];
+    params.push_back(sites[index.first].parameters[index.second]);
+  }
+  return params;
+}
+
+// returns the inverse-pressure (1/P) that corresponds to the given reduced_grand_potential psi
+// advantage: for isotherms with zero equilibrium constant the result would be infinite, but the inverse is zero
+double MultiSiteIsotherm::inversePressureForPsi(size_t site, double reduced_grand_potential, double &cachedP0, const double &Tmp) const
+{
+  const double tiny = 1.0e-15;
+
+  double left_bracket;
+  double right_bracket;
+
+  // For a single Langmuir or Langmuir-Freundlich site, the inverse can be handled analytically
+  // if (numberOfSites == 1 && site == 0)
+  // {
+  //   return sites[0].inversePressureForPsi(reduced_grand_potential, cachedP0, Tmp);
+  // }
+
+  // if (numberOfSites1 == 1 && site == 1)
+  // {
+  //   return sites[site].inversePressureForPsi(reduced_grand_potential, cachedP0, Tmp); //???
+  // }
+
+  // if (numberOfSites1 == 1 && site == 2)
+  // {
+  //   return sites[site].inversePressureForPsi(reduced_grand_potential, cachedP0, Tmp); //???
+  // }
+
+  size_t start_index = 0;
+  for (size_t i = 0; i < site; ++i) {
+      start_index += NumbersOfSites[i];
+  }
+
+  if (NumbersOfSites[site] == 1)
+  {
+    return sites[start_index].inversePressureForPsi(reduced_grand_potential, cachedP0, Tmp);
+  }
+  
+  // from here on, work with pressure, and return 1.0 / pressure at the end of the routine
+  double p_start;
+  if (cachedP0 <= 0.0)
+  {
+    p_start = 5.0;
+  }
+  else
+  {
+    // use the last value of Pi0
+    p_start = cachedP0;
+  }
+
+  // use bisection algorithm
+  double s = psiForPressure(site, p_start, Tmp);
+
+  size_t nr_steps = 0;
+  left_bracket = p_start;
+  right_bracket = p_start;
+
+  if (s < reduced_grand_potential)
+  {
+    // find the bracket on the right
+    do
+    {
+      right_bracket *= 2.0;
+      s = psiForPressure(site, right_bracket, Tmp);
+
+      ++nr_steps;
+      if (nr_steps > 100000)
+      {
+        std::cout << "reduced_grand_potential: " << reduced_grand_potential << std::endl;
+        std::cout << "psi: " << s << std::endl;
+        std::cout << "p_start: " << p_start << std::endl;
+        std::cout << "Left bracket: " << left_bracket << std::endl;
+        std::cout << "Right bracket: " << right_bracket << std::endl;
+        throw std::runtime_error("Error (Inverse bisection): initial bracketing (for sum < 1) does NOT converge\n");
+      }
+    } while (s < reduced_grand_potential);
+  }
+  else
+  {
+    // find the bracket on the left
+    do
+    {
+      left_bracket *= 0.5;
+      s = psiForPressure(site, left_bracket, Tmp);
+
+      ++nr_steps;
+      if (nr_steps > 100000)
+      {
+        std::cout << "reduced_grand_potential: " << reduced_grand_potential << std::endl;
+        std::cout << "psi: " << s << std::endl;
+        std::cout << "p_start: " << p_start << std::endl;
+        std::cout << "Left bracket: " << left_bracket << std::endl;
+        std::cout << "Right bracket: " << right_bracket << std::endl;
+        throw std::runtime_error("Error (Inverse bisection): initial bracketing (for sum > 1) does NOT converge\n");
+      }
+    } while (s > reduced_grand_potential);
+  }
+
+  do
+  {
+    double middle = 0.5 * (left_bracket + right_bracket);
+    s = psiForPressure(site, middle, Tmp);
+
+    if (s > reduced_grand_potential)
+      right_bracket = middle;
+    else
+      left_bracket = middle;
+
+    ++nr_steps;
+    if (nr_steps > 100000)
+    {
+      std::cout << "Left bracket: " << left_bracket << std::endl;
+      std::cout << "Right bracket: " << right_bracket << std::endl;
+      throw std::runtime_error("Error (Inverse bisection): initial bracketing (for sum < 1) does NOT converge\n");
+    }
+  } while (std::abs(left_bracket - right_bracket) / std::abs(left_bracket + right_bracket) > tiny);
+
+  double middle = 0.5 * (left_bracket + right_bracket);
+
+  //  Store the last value of Pi0
+  cachedP0 = middle;
+
+  return 1.0 / middle;
+}
+
+double MultiSiteIsotherm::fitness() const
+{
+  const double penaltyCost = 50.0;
+  for (size_t i = 0; i < numberOfSites; ++i)
+  {
+    if (sites[i].isUnphysical()) return penaltyCost;
+  }
+  return 0.0;
+}
+
+std::string MultiSiteIsotherm::gnuplotFunctionString([[maybe_unused]] char s) const
+{
+  std::ostringstream stream;
+  for (size_t i = 0; i < numberOfSites; ++i)
+  {
+    // +1 because gnuplot start counting from 1
+    stream << sites[i].gnuplotFunctionString(s, siteParameterIndex[i] + 1);
+    if (i < numberOfSites - 1)
+    {
+      stream << "+";
+    }
+  }
+  return stream.str();
+}
