@@ -1,0 +1,115 @@
+SimulationType           Breakthrough  // [-] Type of simulation (Breakthrough curve)
+
+DisplayName              MOF-Z5A // [-] Name of the simulation run
+Temperature              295           // [K] Temperature of the inlet gas
+Ambient_Temperature      295           // [K] Temperature of the surrounding environment
+ColumnLength             0.365         // [m] Total length of the adsorption column
+BoundaryCoord            0.12        // [m] Coordinate where Layer 0 ends and Layer 1 begins
+CarrierGasExist          yes            // If enter yes without "CarrierGas yes" it'll throw an error
+Isothermal               no           // MTC = const. or Enter k0 and Ea, no matter Isothermal or not
+
+D_inner                  0.022         // [m] Inner diameter of the column
+D_out                    0.026         // [m] Outer diameter of the column (including wall thickness)
+
+// First - Layer 0, Second - Layer 1, Third - Layer 2 ...
+
+// Layer 0 = MOF (e.g., Cu-BTC)
+// Layer 1 = Activated Carbon (AC)
+// Layer 2 = Zeolite (e.g., 5A or 13X)
+
+ColumnVoidFraction    0.566          // [-] Interstitial void fraction (porosity) of the bed in Layer 0 (MOF)
+ColumnVoidFraction     0.4152          // [-] Interstitial void fraction (porosity) of the bed in Layer 2 (Zeolite)
+
+ParticleDensity       886.0          // [kg/m^3] Density of the solid adsorbent particles in Layer 0 (MOF)
+ParticleDensity        1329.3         // [kg/m^3] Density of the solid adsorbent particles in Layer 2 (Zeolite)
+
+// --- THERMAL PROPERTIES ---
+
+Cps                    780.0       // [J/(kg*K)] Specific heat capacity of MOF (Layer 0) - Typical: 900-1100
+Cps                    920.0         // [J/(kg*K)] Specific heat capacity of Zeolite (Layer 2) - Typical: 900-1050
+
+Lambda_ax             0.20          // [W/(m*K)] Eff. axial thermal conductivity (MOF - typically lower)
+Lambda_ax              0.35          // [W/(m*K)] Eff. axial thermal conductivity (Zeolite)
+
+Cpw                      500.0         // [J/(kg*K)] Wall Cp (Steel)
+rho_w                    7900.0        // [kg/m^3] Wall density (Steel)
+Lambda_w                 16.0          // [W/(m*K)] Wall thermal conductivity (Steel)
+
+// --- HEAT TRANSFER coefficients ---
+
+h_in                     20.0          // [W/(m^2*K)] Heat transfer coeff Gas-Solid/Wall (Layer 0)
+h_in                     75.312        // [W/(m^2*K)] Heat transfer coeff Gas-Solid/Wall (Layer 2)
+h_out                    20.0          // [W/(m^2*K)] Heat transfer coeff Wall-Ambient (Natural convection)
+
+TotalPressure            1.50e6        // [Pa] Total absolute pressure at the column inlet
+PressureGradient         -5000         // [Pa/m] Linear pressure drop gradient (dP/dz)
+ColumnEntranceVelocity   1.2e-2
+
+NumberOfTimeSteps        auto           // [-] Number of time steps (or 'auto' for automatic duration)
+PrintEvery               10000          // [-] Interval of steps to print status to console
+WriteEvery               100            // [-] Interval of steps to write data to output files
+TimeStep                 0.01           // [s] Size of the time step (dt)
+NumberOfGridPoints       100            // [-] Number of spatial grid points (discretization nodes)
+
+Component 0 MoleculeName               H2    // [-] Chemical formula/Name
+            GasPhaseMolFraction        0.746   // [-] Mole fraction in the feed gas (y_in)
+            Cpg                        28.8  // [J/(mol*K)] Molar heat capacity of the gas component
+            CarrierGas                 yes   // 
+ 
+Component 1 MoleculeName               CH4   // [-] Chemical formula/Name
+            GasPhaseMolFraction        0.038   // [-] Mole fraction in the feed gas (y_in)
+            Cpg                        35.7  // [J/(mol*K)] Molar heat capacity of the gas component
+       Layer 0                      
+            //MassTransferCoefficient    0.86
+	    k0                         4.95e1 // [1/s] 
+	    Ea                         9.41e3  // [J]
+            AxialDispersionCoefficient 0E-06
+            AdsorptionHeat             17656         // MOFs generally have moderate CH4 heat of adsorption
+            NumberOfIsothermSites      1       
+            Langmuir-Freundlich       8.44 43186e-12 0.78 -0.00847 1398 31.517         
+       Layer 1                      
+            //MassTransferCoefficient    0.386
+	    k0                         3.85e1 // [1/s] 
+	    Ea                         11.21e3  // [J]
+            AxialDispersionCoefficient 0E-06
+            AdsorptionHeat              20000             
+            NumberOfIsothermSites      1       
+            Langmuir-Freundlich       7.7190 1.28e-10 1.2683 -0.0128 2918.90 -79.53
+
+Component 2 MoleculeName               CO    // [-] Chemical formula/Name
+            GasPhaseMolFraction        0.027   // [-] Mole fraction in the feed gas (y_in)
+            Cpg                        29.1  // [J/(mol*K)] Molar heat capacity of the gas component
+        Layer 0
+            //MassTransferCoefficient    0.83
+	    k0                         3.67e+01 // [1/s] 
+	    Ea                         8.34e3  // [J]   
+            AxialDispersionCoefficient 0E-06 
+            AdsorptionHeat             17199   // Typical for open-metal site MOFs                               
+            NumberOfIsothermSites      1       
+            Langmuir-Freundlich        6.214 627237e-12 0.569 -0.001464 683 76.35   
+        Layer 1
+            //MassTransferCoefficient   0.15   
+	    k0                         9.48e-01 // [1/s] 
+	    Ea                         4.42e3  // [J]
+            AxialDispersionCoefficient 0E-06 
+            AdsorptionHeat            29096                                 
+            NumberOfIsothermSites      1       
+            Langmuir-Freundlich       10.0934 9.05e-12 1.6884 -0.0194 5016.09 -301.20
+
+Component 3 MoleculeName               CO2   // [-] Chemical formula/Name
+            GasPhaseMolFraction        0.189   // [-] Mole fraction in the feed gas (y_in)
+            Cpg                        37.1  // [J/(mol*K)] Molar heat capacity of the gas component
+        Layer 0
+            MassTransferCoefficient  0.43   // Often slightly faster diffusion in MOFs than zeolites
+	    //k0                         2.27e+01 // [1/s] 
+	    //Ea                         9.88e3  // [J]  
+            AxialDispersionCoefficient 0E-06
+            AdsorptionHeat           25929   // Cu-BTC typically around 30-35 kJ/mol                              
+            NumberOfIsothermSites      1       
+            Langmuir-Freundlich      10.466 27292e-12 0.5869 -0.009513 1454 130.87
+        Layer 1
+            MassTransferCoefficient  0.11   
+            AxialDispersionCoefficient 0E-06
+            AdsorptionHeat           50744                                
+            NumberOfIsothermSites      1       
+            Langmuir-Freundlich      6.9480 6.27e-10 1.3146 -0.0070 4572.19 -162.05
